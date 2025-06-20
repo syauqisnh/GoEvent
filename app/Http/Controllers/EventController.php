@@ -28,6 +28,24 @@ class EventController extends Controller
         return view('dashboard', compact('events'));
     }
 
+    public function register($id)
+    {
+        $user = Auth::user();
+
+        $existing = Registrations::where('user_id', $user->id)->where('event_id', $id)->first();
+
+        if ($existing) {
+            return back()->with('error', 'Kamu sudah terdaftar di event ini.');
+        }
+
+        Registrations::create([
+            'user_id' => $user->id,
+            'event_id' => $id,
+        ]);
+
+        return back()->with('success', 'Berhasil mendaftar event!');
+    }
+
     public function create()
     {
         $events = Events::orderBy('created_at', 'desc')->get();
@@ -89,7 +107,7 @@ class EventController extends Controller
         $event->event_desc = $request->event_desc;
         $event->event_date = $request->event_date;
         $event->location = $request->location;
-        $event->user_id = Auth::id();
+        $event->user_id = session('userData')->id ?? null;
 
         if ($request->hasFile('image_url')) {
             $image = $request->file('image_url');
@@ -102,34 +120,36 @@ class EventController extends Controller
         return redirect()->route('events.create')->with('success', 'Event berhasil dibuat!');
     }
 
-    public function register($eventId)
+    public function participants()
     {
         $user = Auth::user();
 
-        $existing = Registrations::where('user_id', $user->id)
-            ->where('event_id', $eventId)
-            ->first();
-
-        if ($existing) {
-            return back()->with('error', 'Kamu sudah terdaftar pada event ini.');
+        if ($user->role === 'admin') {
+            $events = Events::with(['registrations.user'])->get()->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'event_name' => $event->event_name,
+                    'participants' => $event->registrations->pluck('user.name'),
+                    'participant_count' => $event->registrations->count(),
+                ];
+            });
         }
 
-        Registrations::create([
-            'user_id' => $user->id,
-            'event_id' => $eventId,
-        ]);
-
-        return back()->with('success', 'Berhasil mendaftar event!');
+        return view('events.participants', compact('events'));
     }
 
-    public function participants($id)
+
+    public function myEvents()
     {
-        $event = Events::with(['registrations.user'])->findOrFail($id);
+        /** @var User $user */
+        $user = Auth::user();
 
-        if (Auth::id() !== $event->user_id) {
-            return redirect()->route('dashboard')->with('error', 'Kamu tidak punya akses.');
-        }
+        $events = $user->registrations()
+            ->with('event')
+            ->get()
+            ->pluck('event')
+            ->filter();
 
-        return view('events.participants', compact('event'));
+        return view('events.mine', compact('events'));
     }
 }

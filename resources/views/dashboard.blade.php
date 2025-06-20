@@ -64,13 +64,17 @@
                     </p>
 
                     <div class="d-flex justify-content-between align-items-center mt-3">
-                        <button class="btn btn-primary" 
-                                data-bs-toggle="modal" 
-                                data-bs-target="#registerModal" 
-                                data-event-id="{{ $event->id }}"
-                                data-event-name="{{ $event->event_name }}">
+                        @if(in_array($event->id, $registeredEventIds ?? []))
+                        <button class="btn btn-secondary" disabled>Sudah Terdaftar</button>
+                        @else
+                        <button class="btn btn-primary"
+                            data-bs-toggle="modal"
+                            data-bs-target="#registerModal"
+                            data-event-id="{{ $event->id }}"
+                            data-event-name="{{ $event->event_name }}">
                             Daftar Sekarang
                         </button>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -107,10 +111,10 @@
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         // Toggle deskripsi
-        document.querySelectorAll('.toggle-desc').forEach(function (toggle) {
-            toggle.addEventListener('click', function () {
+        document.querySelectorAll('.toggle-desc').forEach(function(toggle) {
+            toggle.addEventListener('click', function() {
                 const cardText = this.closest('.card-text');
                 const shortDesc = cardText.querySelector('.short-desc');
                 const fullDesc = cardText.querySelector('.full-desc');
@@ -127,19 +131,15 @@
             });
         });
 
-        // Isi modal daftar event
+        // Modal pendaftaran event
         var registerModal = document.getElementById('registerModal');
-        registerModal.addEventListener('show.bs.modal', function (event) {
+        registerModal.addEventListener('show.bs.modal', function(event) {
             var button = event.relatedTarget;
             var eventId = button.getAttribute('data-event-id');
             var eventName = button.getAttribute('data-event-name');
 
-            // Set nama event di modal
             document.getElementById('eventNamePreview').textContent = eventName;
-
-            // Set action form
-            var form = document.getElementById('registerForm');
-            form.action = '/events/' + eventId + '/register';
+            document.getElementById('registerForm').action = '/events/' + eventId + '/register';
         });
     });
 </script>

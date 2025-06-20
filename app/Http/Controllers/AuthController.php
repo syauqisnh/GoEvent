@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Rules\loginCheck;
+use Illuminate\Support\Facades\Session;
 
 class AuthController extends Controller
 {
@@ -17,27 +19,24 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|min:6',
+            'password' => ['required', new loginCheck($request)],
         ]);
 
-        $credentials = $request->only('email', 'password');
+        $user = User::where('email', $request->email)->first();
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-            return redirect()->intended('/dashboard');
-        }
+        Auth::login($user);
 
-        return back()->withErrors([
-            'email' => 'Email atau password salah.',
-        ]);
+        session(['userData' => $user]);
+
+        return redirect()->route('dashboard');
     }
 
-    public function logout(Request $request)
+
+    public function logout()
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/login');
+        Session::flush();
+
+        return redirect()->route('login');
     }
 
     public function showRegisterForm()
